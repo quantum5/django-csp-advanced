@@ -1,0 +1,3 @@
+[run]
+omit =
+    csp_advanced/apps.py
