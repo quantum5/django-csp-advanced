@@ -168,6 +168,19 @@ class TestMiddleware(SimpleTestCase):
     def test_setting_csp(self):
         self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy'], "script-src 'self'")
 
+    @override_settings(ADVANCED_CSP='verbatim bad csp')
+    def test_setting_str(self):
+        self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy'], 'verbatim bad csp')
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_csp_exists(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response['Content-Security-Policy'] = 'verbatim bad csp'
+            return response
+        self.assertEqual(view(self.get_request())['Content-Security-Policy'], 'verbatim bad csp')
+
     @override_settings(ADVANCED_CSP={'bad': ['self']})
     def test_invalid_csp(self):
         self.assertFalse('Content-Security-Policy' in self.make_ok_view()(self.get_request()))
@@ -212,6 +225,15 @@ class TestMiddleware(SimpleTestCase):
             return response
         self.assertEqual(view(self.get_request())['Content-Security-Policy'], "style-src 'none'")
 
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_remove_csp(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'override': True}
+            return response
+        self.assertFalse('Content-Security-Policy' in view(self.get_request()))
+
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
     def test_override_csp_to_report_explicit(self):
         @self.decorator_factory()
@@ -232,7 +254,7 @@ class TestMiddleware(SimpleTestCase):
 
         response = view(self.get_request())
         self.assertEqual(response['Content-Security-Policy-Report-Only'], "script-src 'none'")
-        self.assertTrue('Content-Security-Policy' not in response)
+        self.assertFalse('Content-Security-Policy' in response)
 
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
     def test_override_csp_report_only_explicit(self):
@@ -244,4 +266,4 @@ class TestMiddleware(SimpleTestCase):
 
         response = view(self.get_request())
         self.assertEqual(response['Content-Security-Policy-Report-Only'], "script-src 'none'")
-        self.assertTrue('Content-Security-Policy' not in response)
+        self.assertFalse('Content-Security-Policy' in response)

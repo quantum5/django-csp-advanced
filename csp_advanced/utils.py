@@ -27,15 +27,9 @@ def merge_csp_dict(template, override):
             continue
         orig = result[key]
         if isinstance(orig, list):
-            if orig == template[key]:
-                result[key] = orig + list(value)
-            else:
-                orig += value
+            result[key] = orig + list(value)
         elif isinstance(orig, set):
-            if orig == template[key]:
-                result[key] = orig.union(value)
-            else:
-                orig.update(value)
+            result[key] = orig.union(value)
         elif isinstance(orig, tuple):
             result[key] = orig + tuple(value)
         else:
