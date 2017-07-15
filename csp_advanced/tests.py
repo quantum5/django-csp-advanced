@@ -218,8 +218,8 @@ class TestMiddleware(SimpleTestCase):
             response = HttpResponse()
             response.csp = {'style-src': ['https://dmoj.ca']}
             return response
-        self.assertEqual(view(self.get_request())['Content-Security-Policy'],
-                         "script-src 'self'; style-src https://dmoj.ca")
+        self.assertEqual(sorted(view(self.get_request())['Content-Security-Policy'].split('; ')),
+                         ["script-src 'self'", 'style-src https://dmoj.ca'])
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_override_csp_explicit(self):
