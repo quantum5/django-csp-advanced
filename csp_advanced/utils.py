@@ -1,6 +1,15 @@
-def callable_csp_dict(data, request, response):
+def is_callable_csp_dict(data):
+    if callable(data):
+        return True
+    if not isinstance(data, dict):
+        return False
+    return any(callable(value) for value in data.itervalues())
+
+
+def call_csp_dict(data, request, response):
     if callable(data):
         return data(request, response)
+
     result = {}
     for key, value in data.iteritems():
         if callable(value):

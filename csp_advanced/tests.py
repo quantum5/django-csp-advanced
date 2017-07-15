@@ -1,9 +1,13 @@
 from collections import OrderedDict
 
-from django.test import SimpleTestCase
+from django.core.exceptions import MiddlewareNotUsed
+from django.http import HttpResponse
+from django.test import SimpleTestCase, RequestFactory, override_settings
+from django.utils.decorators import decorator_from_middleware_with_args
 
 from csp import CSPCompiler, InvalidCSPError
-from utils import callable_csp_dict, merge_csp_dict
+from csp_advanced.middleware import AdvancedCSPMiddleware
+from utils import call_csp_dict, merge_csp_dict, is_callable_csp_dict
 
 
 class CSPCompileTest(SimpleTestCase):
@@ -88,26 +92,33 @@ class CallableCSPDictTest(SimpleTestCase):
         return func
 
     def test_callable(self):
-        self.assertEqual(callable_csp_dict(
+        self.assertEqual(call_csp_dict(
             self.make_request_taker({'key': 'value'}), self.request, self.response
         ), {'key': 'value'})
 
     def test_normal_dict(self):
-        self.assertEqual(callable_csp_dict({'key': 'value'}, None, None), {'key': 'value'})
+        self.assertEqual(call_csp_dict({'key': 'value'}, None, None), {'key': 'value'})
 
     def test_callable_entry(self):
-        self.assertEqual(callable_csp_dict(
+        self.assertEqual(call_csp_dict(
             {'key': self.make_request_taker('value')}, self.request, self.response
         ), {'key': 'value'})
 
     def test_mixed_entry(self):
-        self.assertEqual(callable_csp_dict({
+        self.assertEqual(call_csp_dict({
             'key': self.make_request_taker('value'),
             'name': 'mixed',
         }, self.request, self.response), {
             'key': 'value',
             'name': 'mixed'
         })
+
+    def test_is_callable(self):
+        self.assertTrue(is_callable_csp_dict(self.make_request_taker({})))
+        self.assertTrue(is_callable_csp_dict({'key': self.make_request_taker('value')}))
+        self.assertFalse(is_callable_csp_dict({}))
+        self.assertFalse(is_callable_csp_dict({'key': 'value'}))
+        self.assertFalse(is_callable_csp_dict(None))
 
 
 class MergeCSPDictTest(SimpleTestCase):
@@ -133,3 +144,100 @@ class MergeCSPDictTest(SimpleTestCase):
 
     def test_tuple_override(self):
         self.assertEqual(merge_csp_dict({'spam': (1,)}, {'spam': (2,)}), {'spam': (1, 2)})
+
+
+class TestMiddleware(SimpleTestCase):
+    decorator_factory = decorator_from_middleware_with_args(AdvancedCSPMiddleware)
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def make_ok_view(self):
+        @self.decorator_factory()
+        def view(request):
+            return HttpResponse('ok')
+        return view
+
+    def get_request(self):
+        return self.factory.get('/')
+
+    def test_no_csp(self):
+        self.assertRaises(MiddlewareNotUsed, self.decorator_factory)
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_setting_csp(self):
+        self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy'], "script-src 'self'")
+
+    @override_settings(ADVANCED_CSP_REPORT_ONLY={'default-src': ['http://dmoj.ca']})
+    def test_setting_csp_report(self):
+        self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy-Report-Only'],
+                         "default-src http://dmoj.ca")
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']},
+                       ADVANCED_CSP_REPORT_ONLY={'default-src': ['http://dmoj.ca']})
+    def test_setting_both(self):
+        response = self.make_ok_view()(self.get_request())
+        self.assertEqual(response['Content-Security-Policy'], "script-src 'self'")
+        self.assertEqual(response['Content-Security-Policy-Report-Only'], 'default-src http://dmoj.ca')
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_merge_csp_same(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'script-src': ['https://dmoj.ca']}
+            return response
+        self.assertEqual(view(self.get_request())['Content-Security-Policy'], "script-src 'self' https://dmoj.ca")
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_merge_csp_different(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'style-src': ['https://dmoj.ca']}
+            return response
+        self.assertEqual(view(self.get_request())['Content-Security-Policy'],
+                         "script-src 'self'; style-src https://dmoj.ca")
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_override_csp_explicit(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'style-src': ['none'], 'override': True}
+            return response
+        self.assertEqual(view(self.get_request())['Content-Security-Policy'], "style-src 'none'")
+
+    @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
+    def test_override_csp_to_report_explicit(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'style-src': ['none'], 'override': True}
+            return response
+        self.assertEqual(view(self.get_request())['Content-Security-Policy-Report-Only'], "style-src 'none'")
+
+    @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
+    def test_override_csp_report_both_explicit(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp = {'style-src': ['none'], 'override': True}
+            response.csp_report = {'script-src': ['none'], 'override': True}
+            return response
+
+        response = view(self.get_request())
+        self.assertEqual(response['Content-Security-Policy-Report-Only'], "script-src 'none'")
+        self.assertTrue('Content-Security-Policy' not in response)
+
+    @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
+    def test_override_csp_report_only_explicit(self):
+        @self.decorator_factory()
+        def view(request):
+            response = HttpResponse()
+            response.csp_report = {'script-src': ['none'], 'override': True}
+            return response
+
+        response = view(self.get_request())
+        self.assertEqual(response['Content-Security-Policy-Report-Only'], "script-src 'none'")
+        self.assertTrue('Content-Security-Policy' not in response)
