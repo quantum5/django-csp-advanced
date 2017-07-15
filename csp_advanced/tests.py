@@ -165,6 +165,11 @@ class TestMiddleware(SimpleTestCase):
         self.assertRaises(MiddlewareNotUsed, self.decorator_factory)
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
+    def test_new_style(self):
+        middleware = AdvancedCSPMiddleware(lambda request: HttpResponse('ok'))
+        self.assertEqual(middleware(self.get_request())['Content-Security-Policy'], "script-src 'self'")
+
+    @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_setting_csp(self):
         self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy'], "script-src 'self'")
 
