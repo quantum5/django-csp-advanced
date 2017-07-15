@@ -1,10 +1,10 @@
-def callable_csp_dict(data):
+def callable_csp_dict(data, request, response):
     if callable(data):
-        return data()
+        return data(request, response)
     result = {}
     for key, value in data.iteritems():
         if callable(value):
-            result[key] = value()
+            result[key] = value(request, response)
         else:
             result[key] = value
     return result

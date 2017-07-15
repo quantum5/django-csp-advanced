@@ -77,20 +77,34 @@ class CSPCompileTest(SimpleTestCase):
 
 
 class CallableCSPDictTest(SimpleTestCase):
+    request = object()
+    response = object()
+
+    def make_request_taker(self, output):
+        def func(request, response):
+            self.assertEqual(request, self.request)
+            self.assertEqual(response, self.response)
+            return output
+        return func
+
     def test_callable(self):
-        self.assertEqual(callable_csp_dict(lambda: {'key': 'value'}), {'key': 'value'})
+        self.assertEqual(callable_csp_dict(
+            self.make_request_taker({'key': 'value'}), self.request, self.response
+        ), {'key': 'value'})
 
     def test_normal_dict(self):
-        self.assertEqual(callable_csp_dict({'key': 'value'}), {'key': 'value'})
+        self.assertEqual(callable_csp_dict({'key': 'value'}, None, None), {'key': 'value'})
 
     def test_callable_entry(self):
-        self.assertEqual(callable_csp_dict({'key': lambda: 'value'}), {'key': 'value'})
+        self.assertEqual(callable_csp_dict(
+            {'key': self.make_request_taker('value')}, self.request, self.response
+        ), {'key': 'value'})
 
     def test_mixed_entry(self):
         self.assertEqual(callable_csp_dict({
-            'key': lambda: 'value',
+            'key': self.make_request_taker('value'),
             'name': 'mixed',
-        }), {
+        }, self.request, self.response), {
             'key': 'value',
             'name': 'mixed'
         })
