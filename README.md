@@ -1,4 +1,4 @@
-# django-csp-advanced [![Build Status](https://img.shields.io/travis/quantum5/django-csp-advanced.svg?maxAge=2592000)](https://travis-ci.org/quantum5/django-csp-advanced) [![Coverage](https://img.shields.io/codecov/c/gh/quantum5/django-csp-advanced.svg)](https://codecov.io/gh/quantum5/django-csp-advanced)
+# django-csp-advanced [![Build Status](https://img.shields.io/travis/quantum5/django-csp-advanced.svg)](https://travis-ci.org/quantum5/django-csp-advanced) [![Coverage](https://img.shields.io/codecov/c/gh/quantum5/django-csp-advanced.svg)](https://codecov.io/gh/quantum5/django-csp-advanced)
 
 A powerful `Content-Security-Policy` (CSP) middleware for Django. This CSP middleware supports
 using a dictionary syntax for CSP, and using callables taking arguments `(request, response)`

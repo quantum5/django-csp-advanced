@@ -1,3 +1,4 @@
 [run]
 omit =
     csp_advanced/apps.py
+    csp_advanced/views.py
