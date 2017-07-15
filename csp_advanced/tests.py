@@ -168,6 +168,10 @@ class TestMiddleware(SimpleTestCase):
     def test_setting_csp(self):
         self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy'], "script-src 'self'")
 
+    @override_settings(ADVANCED_CSP={'bad': ['self']})
+    def test_invalid_csp(self):
+        self.assertFalse('Content-Security-Policy' in self.make_ok_view()(self.get_request()))
+
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'default-src': ['http://dmoj.ca']})
     def test_setting_csp_report(self):
         self.assertEqual(self.make_ok_view()(self.get_request())['Content-Security-Policy-Report-Only'],

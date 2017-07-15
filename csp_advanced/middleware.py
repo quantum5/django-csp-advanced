@@ -1,8 +1,11 @@
+import logging
 from django.conf import settings
 from django.core.exceptions import MiddlewareNotUsed
 
-from csp_advanced.csp import CSPCompiler
+from csp_advanced.csp import CSPCompiler, InvalidCSPError
 from csp_advanced.utils import is_callable_csp_dict, call_csp_dict, merge_csp_dict
+
+log = logging.getLogger(__name__)
 
 
 class AdvancedCSPMiddleware(object):
@@ -36,8 +39,15 @@ class AdvancedCSPMiddleware(object):
                     csp = merge_csp_dict(csp, update)
                 break
 
-        if csp:
-            response[header] = CSPCompiler(csp).compile()
+        if not csp:
+            return
+
+        try:
+            policy = CSPCompiler(csp).compile()
+        except InvalidCSPError:
+            log.exception('Invalid CSP on page: %s', request.get_full_path())
+            return
+        response[header] = policy
 
     def process_response(self, request, response):
         if self.enforced_csp:
