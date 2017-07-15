@@ -1,0 +1,15 @@
+language: python
+python:
+  - "2.7"
+  - pypy
+env:
+  - DJANGO_VERSION=>=1.8,<1.9
+  - DJANGO_VERSION=>=1.9,<1.10
+  - DJANGO_VERSION=>=1.10,<1.11
+  - DJANGO_VERSION=>=1.11,<2
+install:
+  - pip install . codecov Django$DJANGO_VERSION
+script:
+  - coverage run --source=csp_advanced testproject/manage.py test
+after_script:
+  - codecov
