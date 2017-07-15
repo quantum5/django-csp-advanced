@@ -5,9 +5,9 @@ from django.http import HttpResponse
 from django.test import SimpleTestCase, RequestFactory, override_settings
 from django.utils.decorators import decorator_from_middleware_with_args
 
-from csp import CSPCompiler, InvalidCSPError
+from csp_advanced.csp import CSPCompiler, InvalidCSPError
 from csp_advanced.middleware import AdvancedCSPMiddleware
-from utils import call_csp_dict, merge_csp_dict, is_callable_csp_dict
+from csp_advanced.utils import call_csp_dict, merge_csp_dict, is_callable_csp_dict
 
 
 class CSPCompileTest(SimpleTestCase):
