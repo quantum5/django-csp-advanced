@@ -1,7 +1,6 @@
 import logging
 from django.conf import settings
 from django.core.exceptions import MiddlewareNotUsed
-from django.utils import six
 
 from csp_advanced.csp import CSPCompiler, InvalidCSPError
 from csp_advanced.utils import is_callable_csp_dict, call_csp_dict, merge_csp_dict
@@ -13,11 +12,11 @@ class AdvancedCSPMiddleware(object):
     def __init__(self, get_response=None):
         self.get_response = get_response
         self.enforced_csp = getattr(settings, 'ADVANCED_CSP', None) or {}
-        self.enforced_csp_is_str = isinstance(self.enforced_csp, six.string_types)
+        self.enforced_csp_is_str = isinstance(self.enforced_csp, str)
         self.enforced_csp_callable = is_callable_csp_dict(self.enforced_csp)
         self.report_csp = getattr(settings, 'ADVANCED_CSP_REPORT_ONLY', None) or {}
         self.report_csp_callable = is_callable_csp_dict(self.report_csp)
-        self.report_csp_is_str = isinstance(self.enforced_csp, six.string_types)
+        self.report_csp_is_str = isinstance(self.enforced_csp, str)
         self.report_only_csp = not self.enforced_csp
 
         if not self.enforced_csp and not self.report_csp:

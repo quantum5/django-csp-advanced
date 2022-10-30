@@ -1,7 +1,5 @@
 from itertools import chain
 
-from django.utils import six
-
 
 class InvalidCSPError(ValueError):
     pass
@@ -76,7 +74,7 @@ class CSPCompiler(object):
 
     def compile(self):
         pieces = []
-        for name, value in six.iteritems(self.csp):
+        for name, value in self.csp.items():
             if name in self.CSP_LISTS:
                 if value:
                     pieces.append(self.compile_list(name, value))
@@ -128,5 +126,5 @@ class CSPCompiler(object):
 
     @staticmethod
     def ensure_str(name, value):
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             raise InvalidCSPError('Values for %s must be a string type, not %s', (name, type(value)))

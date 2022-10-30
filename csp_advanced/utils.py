@@ -1,12 +1,9 @@
-from django.utils import six
-
-
 def is_callable_csp_dict(data):
     if callable(data):
         return True
     if not isinstance(data, dict):
         return False
-    return any(callable(value) for value in six.itervalues(data))
+    return any(callable(value) for value in data.values())
 
 
 def call_csp_dict(data, request, response):
@@ -14,7 +11,7 @@ def call_csp_dict(data, request, response):
         return data(request, response)
 
     result = {}
-    for key, value in six.iteritems(data):
+    for key, value in data.items():
         if callable(value):
             result[key] = value(request, response)
         else:
@@ -24,7 +21,7 @@ def call_csp_dict(data, request, response):
 
 def merge_csp_dict(template, override):
     result = template.copy()
-    for key, value in six.iteritems(override):
+    for key, value in override.items():
         if key not in result:
             result[key] = value
             continue
