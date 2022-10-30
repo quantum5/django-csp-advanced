@@ -1,0 +1,31 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
+        django-version:
+          - 'Django>=3.2,<4'
+          - 'Django>=4,<4.1'
+          - 'Django>=4.1,<4.2'
+        include:
+          - python-version: 3.7
+            django-version: 'Django>=3.2,<4'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install codecov '${{ matrix.django-version }}'
+      - name: Run automated tests
+        run: coverage run --source=csp_advanced testproject/manage.py test
+      - name: Upload coverage data
+        uses: codecov/codecov-action@v1
