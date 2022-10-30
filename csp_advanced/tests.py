@@ -2,12 +2,12 @@ from collections import OrderedDict
 
 from django.core.exceptions import MiddlewareNotUsed
 from django.http import HttpResponse
-from django.test import SimpleTestCase, RequestFactory, override_settings
-from django.utils.decorators import decorator_from_middleware_with_args
+from django.test import RequestFactory, SimpleTestCase, override_settings
+from django.utils.decorators import decorator_from_middleware
 
 from csp_advanced.csp import CSPCompiler, InvalidCSPError
 from csp_advanced.middleware import AdvancedCSPMiddleware
-from csp_advanced.utils import call_csp_dict, merge_csp_dict, is_callable_csp_dict
+from csp_advanced.utils import call_csp_dict, is_callable_csp_dict, merge_csp_dict
 
 
 class CSPCompileTest(SimpleTestCase):
@@ -147,13 +147,11 @@ class MergeCSPDictTest(SimpleTestCase):
 
 
 class TestMiddleware(SimpleTestCase):
-    decorator_factory = decorator_from_middleware_with_args(AdvancedCSPMiddleware)
-
     def setUp(self):
         self.factory = RequestFactory()
 
     def make_ok_view(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             return HttpResponse('ok')
         return view
@@ -162,7 +160,7 @@ class TestMiddleware(SimpleTestCase):
         return self.factory.get('/')
 
     def test_no_csp(self):
-        self.assertRaises(MiddlewareNotUsed, self.decorator_factory)
+        self.assertRaises(MiddlewareNotUsed, AdvancedCSPMiddleware)
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_new_style(self):
@@ -179,7 +177,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_csp_exists(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response['Content-Security-Policy'] = 'verbatim bad csp'
@@ -204,7 +202,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_merge_csp_same(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'script-src': ['https://dmoj.ca']}
@@ -213,7 +211,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_merge_csp_different(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'style-src': ['https://dmoj.ca']}
@@ -223,7 +221,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_override_csp_explicit(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'style-src': ['none'], 'override': True}
@@ -232,7 +230,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP={'script-src': ['self']})
     def test_remove_csp(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'override': True}
@@ -241,7 +239,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
     def test_override_csp_to_report_explicit(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'style-src': ['none'], 'override': True}
@@ -250,7 +248,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
     def test_override_csp_report_both_explicit(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp = {'style-src': ['none'], 'override': True}
@@ -263,7 +261,7 @@ class TestMiddleware(SimpleTestCase):
 
     @override_settings(ADVANCED_CSP_REPORT_ONLY={'script-src': ['self']})
     def test_override_csp_report_only_explicit(self):
-        @self.decorator_factory()
+        @decorator_from_middleware(AdvancedCSPMiddleware)
         def view(request):
             response = HttpResponse()
             response.csp_report = {'script-src': ['none'], 'override': True}
